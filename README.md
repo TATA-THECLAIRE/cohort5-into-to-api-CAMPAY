@@ -3,7 +3,7 @@
 A Go-based command-line application for processing mobile money payments in Cameroon using the CamPay API. Supports MTN Mobile Money and Orange Money.
 
 
-## 🎯 Overview
+## Overview
 
 This application integrates with CamPay, a payment gateway that enables merchants to accept and process payments via MTN Mobile Money and Orange Mobile Money in Cameroon. Users can:
 
@@ -14,7 +14,7 @@ This application integrates with CamPay, a payment gateway that enables merchant
 5. Complete payment with their PIN
 6. View the final transaction status
 
-## ✨ Features
+##  Features
 
 - **Secure Authentication**: Uses token-based authentication with username/password credentials
 - **Dual Environment Support**: Test on demo site or run live transactions
@@ -24,14 +24,14 @@ This application integrates with CamPay, a payment gateway that enables merchant
 - **Comprehensive Error Handling**: Clear error messages with CamPay error codes
 - **User-Friendly CLI**: Clean interface with emojis and formatted output
 
-## 📦 Prerequisites
+##  Prerequisites
 
 - **Go 1.21 or higher**: [Download Go](https://golang.org/dl/)
 - **Git**: For version control
 - **CamPay Account**: Free registration at https://demo.campay.net or https://www.campay.net
 - **Mobile Money Account**: MTN or Orange Money account for testing (Cameroon)
 
-## 🔑 CamPay Account Setup
+## CamPay Account Setup
 
 ### Step 1: Register on CamPay
 
@@ -70,7 +70,7 @@ This application integrates with CamPay, a payment gateway that enables merchant
 - Phone numbers must start with country code 237
 - Only MTN and Orange phone numbers are currently supported
 
-## 🚀 Installation
+## Installation
 
 ### 1. Clone the Repository
 
@@ -97,7 +97,7 @@ cp .env.example .env
 nano .env  # or use your preferred editor
 ```
 
-## ⚙️ Configuration
+##  Configuration
 
 ### Environment Variables
 
@@ -118,12 +118,12 @@ ENVIRONMENT="DEV"
 | `ENVIRONMENT` | Operating environment | `DEV` or `PROD` | No (defaults to DEV) |
 
 **Important Security Notes:**
-- ⚠️ Never commit `.env` to Git (already in `.gitignore`)
-- ⚠️ Keep credentials secret
-- ⚠️ Use demo environment for testing
-- ⚠️ Different credentials for DEV vs PROD
+-  Never commit `.env` to Git (already in `.gitignore`)
+-  Keep credentials secret
+-  Use demo environment for testing
+-  Different credentials for DEV vs PROD
 
-## 💻 Usage
+## Usage
 
 ### Running the Application
 
@@ -134,32 +134,32 @@ go run main.go
 ### Example Session
 
 ```
-=== 💰 CamPay Mobile Money Payment System ===
+===  CamPay Mobile Money Payment System ===
 Environment: DEV
 
-🔐 Authenticating with CamPay...
+Authenticating with CamPay...
 ✓ Authentication successful!
 
-📱 Enter mobile money number (e.g., 237670123456): 237670123456
-💵 Enter amount (XAF, no decimals): 1000
-📝 Enter description: Test payment for groceries
+ Enter mobile money number (e.g., 237670123456): 237670123456
+ Enter amount (XAF, no decimals): 1000
+ Enter description: Test payment for groceries
 
-💳 Initiating payment collection...
+ Initiating payment collection...
 
 ✓ Payment collection initiated successfully!
 Transaction Reference: bcedde9b-62a7-4421-96ac-2e6179552a1a
 External Reference: TXN-1700000000
 
-📲 Please check your phone for USSD prompt...
-⏳ Enter your mobile money PIN to complete the payment...
+ Please check your phone for USSD prompt...
+ Enter your mobile money PIN to complete the payment...
 
 Waiting for transaction completion...
 
-⏳ Status: PENDING (attempt 1/60, checking again in 5s...)
-⏳ Status: PENDING (attempt 2/60, checking again in 5s...)
+ Status: PENDING (attempt 1/60, checking again in 5s...)
+Status: PENDING (attempt 2/60, checking again in 5s...)
 
 ============================================================
-           🧾 TRANSACTION FINAL STATUS
+            TRANSACTION FINAL STATUS
 ============================================================
 Reference:           bcedde9b-62a7-4421-96ac-2e6179552a1a
 External Reference:  TXN-1700000000
@@ -170,28 +170,28 @@ Description:         Test payment for groceries
 Transaction Code:    CP201027U00005
 Operator Reference:  1880106956
 ============================================================
-✅ Payment completed successfully!
+ Payment completed successfully!
 
-🎉 Thank you for using CamPay!
+Thank you for using CamPay!
 ```
 
 ### Phone Number Format
 
 Phone numbers must start with the Cameroon country code 237:
 
-- ✅ Correct: `237670123456` (12 digits total)
-- ✅ Correct: `237690123456` (Orange)
-- ❌ Wrong: `670123456` (missing country code)
-- ❌ Wrong: `+237670123456` (no + symbol)
+-  Correct: `237670123456` (12 digits total)
+-  Correct: `237690123456` (Orange)
+-  Wrong: `670123456` (missing country code)
+-  Wrong: `+237670123456` (no + symbol)
 
 ### Amount Format
 
 Amounts must be integers without decimals:
 
-- ✅ Correct: `1000`
-- ✅ Correct: `500`
-- ❌ Wrong: `100.50` (no decimals allowed)
-- ❌ Wrong: `-100` (must be positive)
+-  Correct: `1000`
+-  Correct: `500`
+-  Wrong: `100.50` (no decimals allowed)
+- Wrong: `-100` (must be positive)
 
 ### Building the Executable
 
@@ -482,7 +482,7 @@ Authorization: Token abc123xyz456token789
 | `SUCCESSFUL` | Payment completed successfully |
 | `FAILED` | Payment failed or was cancelled by user |
 
-## ⚠️ Error Codes
+## Error Codes
 
 CamPay API returns specific error codes for different failure scenarios:
 
@@ -493,7 +493,7 @@ CamPay API returns specific error codes for different failure scenarios:
 | ER201 | Invalid amount | Amount must be an integer, no decimals allowed |
 | ER301 | Insufficient balance | User doesn't have enough money in their mobile money account |
 
-## 🐛 Troubleshooting
+## Troubleshooting
 
 ### Common Issues
 
