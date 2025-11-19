@@ -1,18 +1,2 @@
-# Never commit these files!
+
 .env
-
-# Compiled binaries
-campay-payment
-*.exe
-*.test
-*.out
-
-# IDE files
-.vscode/
-.idea/
-*.swp
-
-# OS files
-.DS_Store
-Thumbs.db
-EOF
