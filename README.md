@@ -2,21 +2,6 @@
 
 A Go-based command-line application for processing mobile money payments in Cameroon using the CamPay API. Supports MTN Mobile Money and Orange Money.
 
-## 📋 Table of Contents
-
-- [Overview](#overview)
-- [Features](#features)
-- [Prerequisites](#prerequisites)
-- [CamPay Account Setup](#campay-account-setup)
-- [Installation](#installation)
-- [Configuration](#configuration)
-- [Usage](#usage)
-- [Code Explanation](#code-explanation)
-- [CamPay API Integration](#campay-api-integration)
-- [Error Codes](#error-codes)
-- [Troubleshooting](#troubleshooting)
-- [Testing](#testing)
-- [Contributing](#contributing)
 
 ## 🎯 Overview
 
@@ -657,85 +642,16 @@ go test -v
    ```
 6. **Create a Pull Request** from your fork to the original repo
 
-### Code Review Guidelines
-
-When reviewing others' code, look for:
-
-**✅ Good Practices:**
-- Proper error handling
-- Clear variable names
-- Comments explaining complex logic
-- No hardcoded credentials
-- Input validation
-- Resource cleanup (`defer`)
-
-**💡 Improvement Suggestions:**
-- Add more validation checks
-- Improve error messages
-- Add retry logic for network failures
-- Better user feedback
-- Code organization
-- Add logging capability
-
-### Suggested Improvements
-
-Good pull request ideas:
-1. Add retry logic for failed API calls with exponential backoff
-2. Implement webhook support for real-time status updates
-3. Add logging to a file for audit trail
-4. Create a config file for poll interval and timeout
-5. Add balance checking before payment
-6. Support for batch payments
-7. Add comprehensive unit tests
-8. Create a web interface
-9. Add support for withdrawals (sending money)
-10. Implement airtime purchase feature
-
-## 📝 Assignment Submission Checklist
-
-- [ ] ✅ Code works with CamPay demo environment
-- [ ] ✅ Pushed to GitHub repository
-- [ ] ✅ `.env` file NOT in repo (verify `.gitignore`)
-- [ ] ✅ README with setup instructions
-- [ ] 📸 Screenshot of USSD payment prompt
-- [ ] 📸 Screenshot of successful transaction status
-- [ ] 💬 Discord post in #intro-to-apis channel with:
-  - Link to GitHub repo
-  - Brief description
-  - Screenshots attached
-- [ ] 👀 Reviewed 2+ other students' submissions
-- [ ] 🔧 Created 1+ pull request with improvements
-
-## 📚 Resources
-
-- [CamPay Official Documentation](https://documenter.getpostman.com/view/2391374/T1LV8PVA)
-- [CamPay Demo Site](https://demo.campay.net)
-- [CamPay Production Site](https://www.campay.net)
-- [Go Documentation](https://golang.org/doc/)
-- [Go by Example: JSON](https://gobyexample.com/json)
-- [Go by Example: HTTP Clients](https://gobyexample.com/http-clients)
-
-## 📄 License
-
-This project is for educational purposes as part of an API integration assignment.
 
 ## 👨‍💻 Author
 
-Your Name - [GitHub Profile](https://github.com/yourusername)
+Your Name - TATA-THECLAIRE
 
 ## 🙏 Acknowledgments
 
 - CamPay for providing the payment gateway API
 - TAKWID GROUP for CamPay services
-- Course instructors for the assignment
+- postman
+- go docs
 
----
 
-**Note**: This application is designed for learning purposes. For production use, consider:
-- Database for transaction logging
-- Webhook implementation for async updates
-- Rate limiting and request throttling
-- Comprehensive error recovery
-- Security audit
-- Load testing
-- Monitoring and alerting
