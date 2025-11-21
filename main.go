@@ -15,27 +15,27 @@ import (
 	"github.com/joho/godotenv"
 )
 
-// TokenRequest represents credentials for authentication
+/* ============================================================
+   ===============  REQUEST / RESPONSE MODELS  =================
+   ============================================================ */
+
 type TokenRequest struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
 }
 
-// TokenResponse represents the authentication token response
 type TokenResponse struct {
 	Token string `json:"token"`
 }
 
-// CollectRequest represents the payment collection request to CamPay
 type CollectRequest struct {
-	Amount            string `json:"amount"`
+	Amount            int    `json:"amount"`
 	Currency          string `json:"currency"`
 	From              string `json:"from"`
 	Description       string `json:"description"`
 	ExternalReference string `json:"external_reference"`
 }
 
-// CollectResponse represents CamPay's response when initiating payment
 type CollectResponse struct {
 	Reference         string `json:"reference"`
 	ExternalReference string `json:"external_reference"`
@@ -47,12 +47,11 @@ type CollectResponse struct {
 	OperatorReference string `json:"operator_reference"`
 }
 
-// TransactionResponse represents the transaction status from CamPay
 type TransactionResponse struct {
 	Reference         string  `json:"reference"`
 	ExternalReference string  `json:"external_reference"`
 	Status            string  `json:"status"`
-	Amount            float64 `json:"amount"` // CamPay returns this as number
+	Amount            float64 `json:"amount"`
 	Currency          string  `json:"currency"`
 	Operator          string  `json:"operator"`
 	Code              string  `json:"code"`
@@ -60,318 +59,326 @@ type TransactionResponse struct {
 	Description       string  `json:"description"`
 }
 
-// ErrorResponse represents CamPay API error response
 type ErrorResponse struct {
 	Code    string `json:"code"`
 	Message string `json:"message"`
 }
 
+/* ============================================================
+   ========================= MAIN ==============================
+   ============================================================ */
+
 func main() {
-	err := run()
-	if err != nil {
+	if err := run(); err != nil {
 		fmt.Println("❌ Error:", err)
 		os.Exit(1)
 	}
 }
 
 func run() error {
-	// Load environment variables from .env file
+	// Load .env values
 	if _, err := os.Stat(".env"); err == nil {
-		err = godotenv.Load()
-		if err != nil {
-			return fmt.Errorf("failed to load .env file: %w", err)
+		if err := godotenv.Load(); err != nil {
+			return fmt.Errorf("failed to load .env: %w", err)
 		}
 	}
 
-	// Get credentials from environment
 	username := os.Getenv("APP_USERNAME")
 	password := os.Getenv("APP_PASSWORD")
-	environment := os.Getenv("ENVIRONMENT") 
+	env := os.Getenv("ENVIRONMENT")
 
 	if username == "" || password == "" {
-		return fmt.Errorf("APP_USERNAME and APP_PASSWORD must be set in .env file")
+		return fmt.Errorf("APP_USERNAME and APP_PASSWORD must be set")
+	}
+	if env == "" {
+		env = "DEV"
 	}
 
-	if environment == "" {
-		environment = "DEV" // Default to development/demo
-	}
+	apiBaseURL := map[bool]string{
+		true:  "https://www.campay.net/api",
+		false: "https://demo.campay.net/api",
+	}[env == "PROD"]
 
-	// Determine API base URL based on environment
-	var apiBaseURL string
-	if environment == "PROD" {
-		apiBaseURL = "https://www.campay.net/api"
-	} else {
-		apiBaseURL = "https://demo.campay.net/api"
-	}
+	fmt.Println("=== CamPay Mobile Money Payment System ===")
+	fmt.Printf("Environment: %s\n\n", env)
 
-	fmt.Println("===  CamPay Mobile Money Payment System ===")
-	fmt.Printf("Environment: %s\n\n", environment)
-
-	// Step 1: Get authentication token
-	fmt.Println(" Authenticating with CamPay...")
+	// Authenticate
+	fmt.Println("🔐 Authenticating...")
 	token, err := getAuthToken(apiBaseURL, username, password)
 	if err != nil {
-		return fmt.Errorf("authentication failed: %w", err)
+		return err
 	}
-	fmt.Println("✓ Authentication successful!")
+	fmt.Println("✓ Authentication successful")
 
-	// Step 2: Get user input
-	phoneNumber, err := promptUser(" Enter mobile money number (e.g., 237670123456): ")
+	// User Input
+	phone, err := promptPhone()
 	if err != nil {
 		return err
 	}
 
-	// Validate phone number format
-	if !strings.HasPrefix(phoneNumber, "237") || len(phoneNumber) != 12 {
-		return fmt.Errorf("invalid phone number format. Must start with 237 and be 12 digits total")
-	}
-
-	amountStr, err := promptUser(" Enter amount (XAF, no decimals): ")
+	amount, err := promptAmount()
 	if err != nil {
 		return err
 	}
 
-	// Validate amount is a positive integer
-	amount, err := strconv.Atoi(amountStr)
-	if err != nil || amount <= 0 {
-		return fmt.Errorf("invalid amount. Must be a positive integer")
-	}
-
-	description, err := promptUser(" Enter description: ")
+	description, err := promptUser("Enter description: ")
 	if err != nil {
 		return err
 	}
 
-	// Generate a unique external reference for this transaction
 	externalRef := fmt.Sprintf("TXN-%d", time.Now().Unix())
 
-	// Step 3: Create payment collection request
 	collectReq := CollectRequest{
-		Amount:            amountStr,
+		Amount:            amount,
 		Currency:          "XAF",
-		From:              phoneNumber,
+		From:              phone,
 		Description:       description,
 		ExternalReference: externalRef,
 	}
 
-	fmt.Println("\n Initiating payment collection...")
+	fmt.Println("\n📲 Initiating payment...")
 
-	// Step 4: Send collect request to CamPay
+	// Collect request
 	reference, err := collectPayment(apiBaseURL, token, collectReq)
 	if err != nil {
-		return fmt.Errorf("failed to initiate payment: %w", err)
+		return err
 	}
 
-	fmt.Printf("\n✓ Payment collection initiated successfully!")
-	fmt.Printf("\nTransaction Reference: %s\n", reference)
-	fmt.Printf("External Reference: %s\n", externalRef)
-	fmt.Println("\n Please check your phone for USSD prompt...")
-	fmt.Println(" Enter your mobile money PIN to complete the payment...")
-	fmt.Println("\nWaiting for transaction completion...")
+	fmt.Printf("\n✓ Payment initiated\nReference: %s\n", reference)
+	fmt.Println("Please check your phone for USSD popup...")
 
-	// Step 5: Poll for transaction status
+	// Wait for status
 	finalStatus, err := pollTransactionStatus(apiBaseURL, token, reference)
 	if err != nil {
-		return fmt.Errorf("failed to get transaction status: %w", err)
+		return err
 	}
 
-	// Step 6: Display final status
 	displayFinalStatus(finalStatus)
-
 	return nil
 }
 
-// getAuthToken authenticates with CamPay and returns access token
+/* ============================================================
+   ====================== HELPER FUNCTIONS =====================
+   ============================================================ */
+
+var httpClient = &http.Client{Timeout: 30 * time.Second}
+
+// =============================================================
+// Authentication
+// =============================================================
+
 func getAuthToken(baseURL, username, password string) (string, error) {
-	tokenReq := TokenRequest{
-		Username: username,
-		Password: password,
-	}
-
-	jsonData, err := json.Marshal(tokenReq)
+	reqBody, _ := json.Marshal(TokenRequest{Username: username, Password: password})
+	req, err := http.NewRequest("POST", baseURL+"/token/", bytes.NewBuffer(reqBody))
 	if err != nil {
-		return "", fmt.Errorf("failed to marshal token request: %w", err)
+		return "", err
 	}
-
-	url := baseURL + "/token/"
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
-	if err != nil {
-		return "", fmt.Errorf("failed to create request: %w", err)
-	}
-
 	req.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{Timeout: 30 * time.Second}
-	resp, err := client.Do(req)
+	resp, err := httpClient.Do(req)
 	if err != nil {
-		return "", fmt.Errorf("failed to send request: %w", err)
+		return "", err
 	}
 	defer resp.Body.Close()
 
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return "", fmt.Errorf("failed to read response: %w", err)
-	}
+	body, _ := io.ReadAll(resp.Body)
 
-	if resp.StatusCode != http.StatusOK {
-		var errResp ErrorResponse
-		json.Unmarshal(body, &errResp)
-		return "", fmt.Errorf("authentication failed (status %d): %s - %s", resp.StatusCode, errResp.Code, errResp.Message)
+	if resp.StatusCode != 200 {
+		return "", formatAPIError(resp.StatusCode, body)
 	}
 
 	var tokenResp TokenResponse
-	err = json.Unmarshal(body, &tokenResp)
-	if err != nil {
-		return "", fmt.Errorf("failed to parse token response: %w", err)
+	if err := json.Unmarshal(body, &tokenResp); err != nil {
+		return "", err
 	}
-
 	return tokenResp.Token, nil
 }
 
-// promptUser displays a prompt and reads user input
+// =============================================================
+// User Input
+// =============================================================
+
 func promptUser(prompt string) (string, error) {
 	fmt.Print(prompt)
 	reader := bufio.NewReader(os.Stdin)
+
 	input, err := reader.ReadString('\n')
 	if err != nil {
-		return "", fmt.Errorf("failed to read input: %w", err)
+		return "", err
 	}
-	return strings.TrimSpace(input), nil
+
+	input = strings.TrimSpace(input)
+	if input == "" {
+		return promptUser(prompt)
+	}
+	return input, nil
 }
 
-// collectPayment initiates a payment collection from user's mobile money
-func collectPayment(baseURL, token string, collect CollectRequest) (string, error) {
-	jsonData, err := json.Marshal(collect)
+func promptPhone() (string, error) {
+	phone, err := promptUser("Enter mobile money number (e.g., 670123456 or 237670123456): ")
 	if err != nil {
-		return "", fmt.Errorf("failed to marshal collect request: %w", err)
+		return "", err
 	}
 
-	url := baseURL + "/collect/"
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
+	// Normalize
+	phone = strings.TrimSpace(phone)
+	phone = strings.ReplaceAll(phone, " ", "")
+
+	// Local number
+	if len(phone) == 9 && phone[0] == '6' {
+		phone = "237" + phone
+	}
+
+	if !strings.HasPrefix(phone, "237") || len(phone) != 12 {
+		return "", fmt.Errorf("invalid phone number format")
+	}
+	return phone, nil
+}
+
+func promptAmount() (int, error) {
+	amtStr, err := promptUser("Enter amount (XAF): ")
 	if err != nil {
-		return "", fmt.Errorf("failed to create request: %w", err)
+		return 0, err
+	}
+
+	amount, err := strconv.Atoi(amtStr)
+	if err != nil || amount <= 0 {
+		return 0, fmt.Errorf("amount must be a positive integer")
+	}
+
+	return amount, nil
+}
+
+// =============================================================
+// Payment Collect
+// =============================================================
+
+func collectPayment(baseURL, token string, collect CollectRequest) (string, error) {
+	reqBody, _ := json.Marshal(collect)
+
+	req, err := http.NewRequest("POST", baseURL+"/collect/", bytes.NewBuffer(reqBody))
+	if err != nil {
+		return "", err
 	}
 
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Token "+token)
 
-	client := &http.Client{Timeout: 30 * time.Second}
-	resp, err := client.Do(req)
+	resp, err := httpClient.Do(req)
 	if err != nil {
-		return "", fmt.Errorf("failed to send request: %w", err)
+		return "", err
 	}
 	defer resp.Body.Close()
 
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return "", fmt.Errorf("failed to read response: %w", err)
-	}
-
-	// CamPay returns 200 for successful collect initiation
-	if resp.StatusCode != http.StatusOK {
-		var errResp ErrorResponse
-		json.Unmarshal(body, &errResp)
-		return "", fmt.Errorf("collect request failed (status %d): %s - %s", resp.StatusCode, errResp.Code, errResp.Message)
+	body, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode != 200 {
+		return "", formatAPIError(resp.StatusCode, body)
 	}
 
 	var collectResp CollectResponse
-	err = json.Unmarshal(body, &collectResp)
-	if err != nil {
-		return "", fmt.Errorf("failed to parse collect response: %w", err)
+	if err := json.Unmarshal(body, &collectResp); err != nil {
+		return "", err
 	}
 
 	return collectResp.Reference, nil
 }
 
-// pollTransactionStatus continuously checks transaction status until complete
-func pollTransactionStatus(baseURL, token, reference string) (*TransactionResponse, error) {
-	maxAttempts := 60 // 5 minutes (60 * 5 seconds)
-	interval := 5 * time.Second
+// =============================================================
+// Poll for Status
+// =============================================================
 
-	for attempt := 0; attempt < maxAttempts; attempt++ {
+func pollTransactionStatus(baseURL, token, reference string) (*TransactionResponse, error) {
+	const maxAttempts = 40
+	const interval = 5 * time.Second
+
+	for attempt := 1; attempt <= maxAttempts; attempt++ {
 		status, err := checkTransactionStatus(baseURL, token, reference)
 		if err != nil {
 			return nil, err
 		}
 
-		// Check if transaction is in a final state
-		switch strings.ToUpper(status.Status) {
-		case "SUCCESSFUL":
+		s := normalizeStatus(status.Status)
+
+		if s == "SUCCESSFUL" || s == "FAILED" {
 			return status, nil
-		case "FAILED":
-			return status, nil
-		case "PENDING":
-			fmt.Printf(" Status: PENDING (attempt %d/%d, checking again in %v...)\n", attempt+1, maxAttempts, interval)
-		default:
-			fmt.Printf(" Status: %s (checking again in %v...)\n", status.Status, interval)
 		}
 
+		fmt.Printf("Status: %s (attempt %d/%d)\n", s, attempt, maxAttempts)
 		time.Sleep(interval)
 	}
 
-	return nil, fmt.Errorf("transaction status check timed out after %d attempts", maxAttempts)
+	return nil, fmt.Errorf("transaction polling timed out")
 }
 
-// checkTransactionStatus makes a single API call to check transaction status
 func checkTransactionStatus(baseURL, token, reference string) (*TransactionResponse, error) {
-	url := fmt.Sprintf("%s/transaction/%s/", baseURL, reference)
-	req, err := http.NewRequest("GET", url, nil)
+	req, err := http.NewRequest("GET", fmt.Sprintf("%s/transaction/%s/", baseURL, reference), nil)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
+		return nil, err
 	}
 
 	req.Header.Set("Authorization", "Token "+token)
 
-	client := &http.Client{Timeout: 30 * time.Second}
-	resp, err := client.Do(req)
+	resp, err := httpClient.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("failed to send request: %w", err)
+		return nil, err
 	}
 	defer resp.Body.Close()
 
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read response: %w", err)
+	body, _ := io.ReadAll(resp.Body)
+
+	if resp.StatusCode != 200 {
+		return nil, formatAPIError(resp.StatusCode, body)
 	}
 
-	if resp.StatusCode != http.StatusOK {
-		var errResp ErrorResponse
-		json.Unmarshal(body, &errResp)
-		return nil, fmt.Errorf("status check failed (status %d): %s - %s", resp.StatusCode, errResp.Code, errResp.Message)
+	var txn TransactionResponse
+	if err := json.Unmarshal(body, &txn); err != nil {
+		return nil, err
 	}
 
-	var txnResp TransactionResponse
-	err = json.Unmarshal(body, &txnResp)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse transaction response: %w", err)
-	}
-
-	return &txnResp, nil
+	return &txn, nil
 }
 
-// displayFinalStatus prints the final transaction status in a formatted way
-func displayFinalStatus(status *TransactionResponse) {
-	fmt.Println("\n" + strings.Repeat("=", 60))
-	fmt.Println("           TRANSACTION FINAL STATUS")
-	fmt.Println(strings.Repeat("=", 60))
-	fmt.Printf("Reference:           %s\n", status.Reference)
-	fmt.Printf("External Reference:  %s\n", status.ExternalReference)
-	fmt.Printf("Status:              %s\n", status.Status)
-	fmt.Printf("Amount:              %.0f %s\n", status.Amount, status.Currency)
-	fmt.Printf("Operator:            %s\n", status.Operator)
-	fmt.Printf("Description:         %s\n", status.Description)
-	fmt.Printf("Transaction Code:    %s\n", status.Code)
-	fmt.Printf("Operator Reference:  %s\n", status.OperatorReference)
-	fmt.Println(strings.Repeat("=", 60))
+// =============================================================
+// Helpers
+// =============================================================
 
-	switch strings.ToUpper(status.Status) {
+func normalizeStatus(s string) string {
+	return strings.ToUpper(strings.TrimSpace(s))
+}
+
+func formatAPIError(status int, body []byte) error {
+	var er ErrorResponse
+	if json.Unmarshal(body, &er) == nil && er.Message != "" {
+		return fmt.Errorf("API error (%d): %s - %s", status, er.Code, er.Message)
+	}
+	return fmt.Errorf("API error (%d): %s", status, string(body))
+}
+
+// =============================================================
+// Display Result
+// =============================================================
+
+func displayFinalStatus(s *TransactionResponse) {
+	fmt.Println("\n============================================================")
+	fmt.Println("                 TRANSACTION FINAL STATUS")
+	fmt.Println("============================================================")
+
+	fmt.Printf("Reference:           %s\n", s.Reference)
+	fmt.Printf("External Reference:  %s\n", s.ExternalReference)
+	fmt.Printf("Status:              %s\n", s.Status)
+	fmt.Printf("Amount:              %.0f %s\n", s.Amount, s.Currency)
+	fmt.Printf("Operator:            %s\n", s.Operator)
+	fmt.Printf("Description:         %s\n", s.Description)
+	fmt.Printf("Code:                %s\n", s.Code)
+	fmt.Printf("Operator Reference:  %s\n", s.OperatorReference)
+	fmt.Println("============================================================")
+
+	switch normalizeStatus(s.Status) {
 	case "SUCCESSFUL":
-		fmt.Println("Payment completed successfully!")
-		fmt.Println("\n Thank you for using CamPay!")
+		fmt.Println("🎉 Payment successful!")
 	case "FAILED":
-		fmt.Println("❌ Payment failed or was cancelled")
-		fmt.Println("\n Please try again or contact support if the issue persists")
+		fmt.Println("❌ Payment failed")
 	default:
-		fmt.Printf("  Payment status: %s\n", status.Status)
+		fmt.Println("⚠ Unknown status:", s.Status)
 	}
 }
